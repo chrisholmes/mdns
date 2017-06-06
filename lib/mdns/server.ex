@@ -58,6 +58,13 @@ defmodule Mdns.Server do
             multicast_ttl:   255,
             reuseaddr:       true
         ]
+        udp_options = case :os.type() do
+          {:unix, :darwin} ->
+            sol_socket = 0xffff
+            sol_reuseport = 0x0200
+            [{:raw, sol_socket, sol_reuseport, <<1::32-native>>} | udp_options ]
+          _ -> udp_options
+        end
         {:ok, udp} = :gen_udp.open(@port, udp_options)
         {:reply, :ok, %State{state | udp: udp}}
     end
@@ -116,7 +123,7 @@ defmodule Mdns.Server do
             length(services) > 0 ->
                 packet = %DNS.Record{@response_packet | :anlist => services}
                 Logger.debug("Sending Packet: #{inspect packet}")
-                :gen_udp.send(state.udp, @mdns_group, @port, DNS.Record.encode(packet))
+                :ok = :gen_udp.send(state.udp, @mdns_group, @port, DNS.Record.encode(packet))
             true -> :nil
         end
 

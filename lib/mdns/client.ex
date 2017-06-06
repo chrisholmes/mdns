@@ -63,6 +63,13 @@ defmodule Mdns.Client do
             multicast_ttl:   255,
             reuseaddr:       true
         ]
+        udp_options = case :os.type() do
+          {:unix, :darwin} ->
+            sol_socket = 0xffff
+            sol_reuseport = 0x0200
+            [{:raw, sol_socket, sol_reuseport, <<1::32-native>>} | udp_options ]
+          _ -> udp_options
+        end
         {:ok, udp} = :gen_udp.open(@port, udp_options)
         {:reply, :ok, %State{state | udp: udp}}
     end
